@@ -1,0 +1,6 @@
+{
+  "name": "Analizador de CV y Ofertas de TI",
+  "description": "Analiza tu Currículum Vitae frente a ofertas de empleo tecnológicas para calcular brechas de habilidades y obtener consejos de optimización liderados por un reclutador de IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
