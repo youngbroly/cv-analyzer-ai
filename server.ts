@@ -1,20 +1,19 @@
-
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
-// Load environment variables
+// Cargar variables de entorno (.env)
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
-// Allow body parsing
+// Permitir lectura de JSON con un límite amplio para soportar textos largos de CVs
 app.use(express.json({ limit: "15mb" }));
 
-// Lazy initializer for Gemini Client
+// Inicializador diferido para el cliente de Gemini
 let geminiClient: GoogleGenAI | null = null;
 
 function getGeminiClient(): GoogleGenAI {
@@ -25,6 +24,7 @@ function getGeminiClient(): GoogleGenAI {
         "La clave API de Gemini no está configurada o contiene el marcador de posición por defecto. Configúrala en la pestaña de Secretos."
       );
     }
+    // Inicialización oficial según el nuevo SDK @google/genai
     geminiClient = new GoogleGenAI({
       apiKey: apiKey,
     });
@@ -32,7 +32,7 @@ function getGeminiClient(): GoogleGenAI {
   return geminiClient;
 }
 
-// REST API endpoint for Gap Analysis
+// Endpoint de la API REST para el Análisis de Brechas
 app.post("/api/analyze", async (req, res) => {
   try {
     const { cvText, jobText } = req.body;
@@ -49,11 +49,11 @@ app.post("/api/analyze", async (req, res) => {
     const systemPrompt = `Eres un reclutador experto mundial en reclutamiento de TI (Tecnologías de la Información) y consultor de carrera de software avanzado. Tu misión es realizar un análisis de brechas exhaustivo, crítico y exacto entre el Curriculum Vitae (CV) de un candidato y los requisitos técnicos de una Oferta de Empleo.
 
 Debes leer ambos textos detalladamente y responder en un formato JSON estrictamente válido que describa con precisión:
-1. 'compatibilityPercentage': Porcentaje entero de compatibilidad general basado en habilidades requeridas versus ofrecidas (pondera altamente las tecnologias núcleo del puesto).
+1. 'compatibilityPercentage': Porcentaje entero de compatibilidad general basado en habilidades requeridas versus ofrecidas (pondera altamente las tecnologías núcleo del puesto).
 2. 'roleSummary': Un breve resumen ejecutivo en español de lo que pide la oferta, su nivel de seniority y responsabilidades clave.
 3. 'candidateStrengths': Una lista estructurada de los puntos fuertes del candidato que coinciden plenamente con lo solicitado.
 4. 'matchingTechnologies': Las tecnologías, lenguajes, frameworks o herramientas que sí coinciden tanto en la oferta como en el CV (pueden ser sinónimos, pero extráelos de manera uniforme y limpia).
-5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugerivas en la oferta que no aparecen en el CV del candidato.
+5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugeridas en la oferta que no aparecen en el CV del candidato.
 6. 'optimizationTips': Un array de consejos u optimizaciones personalizadas, categorizadas por 'category' (ej. "Reescritura de Logros", "Habilidades Técnicas", "Proyectos Personales", "Certificaciones") con detalles claros ('tip') e impacto estimado ('impact'), ayudando al candidato a saber exactamente qué reescribir, qué añadir o qué destacar para este puesto en particular.
 7. 'suggestedIntroParagraph': Un resumen profesional (párrafo de introducción) en español redactado a la medida de este empleo que el candidato podría colocar al inicio de su CV para captar de inmediato el interés del reclutador, uniendo de manera atractiva sus fortalezas clave con los requisitos críticos de la oferta.
 
@@ -69,12 +69,13 @@ ${jobText}
 
 Analiza meticulosamente ambos textos según las reglas asignadas y completa el esquema JSON solicitado de forma exhaustiva.`;
 
+    // Llamada optimizada usando gemini-2.5-flash y tipos nativos en formato string plano
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
-        temperature: 0.2,
+        temperature: 0.2, // Baja temperatura para asegurar respuestas basadas estrictamente en los textos
         responseMimeType: "application/json",
         responseSchema: {
           type: "object",
@@ -142,14 +143,14 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
     return res.json(resultObj);
 
   } catch (error: any) {
-    console.error("Error durante análisis de brechas:", error);
+    console.error("Error durante el análisis de brechas:", error);
     return res.status(500).json({
       error: error.message || "Se produjo un error inesperado al analizar el CV frente a la oferta de empleo.",
     });
   }
 });
 
-// Setup Vite & static serving
+// Configuración del servidor estático y entorno Vite
 async function setupServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
