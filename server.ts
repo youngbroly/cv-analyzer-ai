@@ -42,7 +42,7 @@ app.post("/api/analyze", async (req, res) => {
       throw new Error("La clave API de Gemini no está configurada en las variables de entorno.");
     }
 
-    const systemPrompt = `Eres un reclutador experto mundial en reclutamiento de TI (Tecnologías de la Información) y consultor de carrera de software avanzado. Tu misión es realizar un análisis de brechas exhaustivo, crítico y exacto entre el Curriculum Vitae (CV) de un candidato y los requisitos técnicos de una Oferta de Empleo.
+    const systemPrompt = `Eres un reclutador experto mundial en reclutamiento de TI (Tecnologías de la Información) y consultor de carrera de software advanced. Tu misión es realizar un análisis de brechas exhaustivo, crítico y exacto entre el Curriculum Vitae (CV) de un candidato y los requisitos técnicos de una Oferta de Empleo.
 
 Debes leer ambos textos detalladamente y responder en un formato JSON estrictamente válido que describa con precisión:
 1. 'compatibilityPercentage': Porcentaje entero de compatibilidad general basado en habilidades requeridas versus ofrecidas (pondera altamente las tecnologías núcleo del puesto).
@@ -79,7 +79,7 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
         parts: [{ text: systemPrompt }]
       },
       generationConfig: {
-        temperature: 0.2,
+        temperature: 0.0, // MEJORADO: Fijado en 0.0 para total consistencia y eliminar variaciones en los KPIs
         responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
