@@ -1,38 +1,18 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
-// Cargar variables de entorno (.env)
+// Cargar variables de entorno
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
-// Permitir lectura de JSON con un límite amplio para soportar textos largos de CVs
+// Permitir lectura de JSON con límite amplio
 app.use(express.json({ limit: "15mb" }));
 
-// Inicializador diferido para el cliente de Gemini
-let geminiClient: GoogleGenAI | null = null;
-
-function getGeminiClient(): GoogleGenAI {
-  if (!geminiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
-      throw new Error(
-        "La clave API de Gemini no está configurada o contiene el marcador de posición por defecto. Configúrala en la pestaña de Secretos."
-      );
-    }
-    // Inicialización oficial según el nuevo SDK @google/genai
-    geminiClient = new GoogleGenAI({
-      apiKey: apiKey,
-    });
-  }
-  return geminiClient;
-}
-
-// Endpoint de la API REST para el Análisis de Brechas
+// Endpoint de la API REST para el Análisis de Brechas usando Fetch Nativo (Evita caídas de librerías)
 app.post("/api/analyze", async (req, res) => {
   try {
     const { cvText, jobText } = req.body;
@@ -44,7 +24,10 @@ app.post("/api/analyze", async (req, res) => {
       return res.status(400).json({ error: "El texto de la oferta de trabajo es requerido para el análisis." });
     }
 
-    const ai = getGeminiClient();
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+      throw new Error("La clave API de Gemini no está configurada en las variables de entorno.");
+    }
 
     const systemPrompt = `Eres un reclutador experto mundial en reclutamiento de TI (Tecnologías de la Información) y consultor de carrera de software avanzado. Tu misión es realizar un análisis de brechas exhaustivo, crítico y exacto entre el Curriculum Vitae (CV) de un candidato y los requisitos técnicos de una Oferta de Empleo.
 
@@ -69,57 +52,43 @@ ${jobText}
 
 Analiza meticulosamente ambos textos según las reglas asignadas y completa el esquema JSON solicitado de forma exhaustiva.`;
 
-    // Llamada optimizada usando gemini-2.5-flash y tipos nativos en formato string plano
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: userPrompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.2, // Baja temperatura para asegurar respuestas basadas estrictamente en los textos
+    // Estructura de llamada HTTP pura para Gemini 2.5 Flash con Esquema JSON Estricto
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      generationConfig: {
+        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
-          type: "object",
+          type: "OBJECT",
           properties: {
-            compatibilityPercentage: {
-              type: "integer",
-              description: "General compliance level from 0 to 100."
-            },
-            roleSummary: {
-              type: "string",
-              description: "Brief summary in Spanish describing the job opportunity, key mission, and seniority."
-            },
-            candidateStrengths: {
-              type: "array",
-              items: { type: "string" },
-              description: "Key strengths of this candidate that fit current offer perfectly."
-            },
-            matchingTechnologies: {
-              type: "array",
-              items: { type: "string" },
-              description: "List of tech keywords matching."
-            },
-            missingTechnologies: {
-              type: "array",
-              items: { type: "string" },
-              description: "Critical technologies or competencies required in the job card that are missing from the CV."
-            },
+            compatibilityPercentage: { type: "INTEGER", description: "General compliance level from 0 to 100." },
+            roleSummary: { type: "STRING", description: "Brief summary in Spanish describing the job opportunity, key mission, and seniority." },
+            candidateStrengths: { type: "ARRAY", items: { type: "STRING" }, description: "Key strengths of this candidate." },
+            matchingTechnologies: { type: "ARRAY", items: { type: "STRING" }, description: "List of tech keywords matching." },
+            missingTechnologies: { type: "ARRAY", items: { type: "STRING" }, description: "Critical technologies missing from the CV." },
             optimizationTips: {
-              type: "array",
+              type: "ARRAY",
               items: {
-                type: "object",
+                type: "OBJECT",
                 properties: {
-                  category: { type: "string" },
-                  tip: { type: "string" },
-                  impact: { type: "string" }
+                  category: { type: "STRING" },
+                  tip: { type: "STRING" },
+                  impact: { type: "STRING" }
                 },
                 required: ["category", "tip", "impact"]
               },
-              description: "Actionable concrete instructions to update the curriculum to boost conversion."
+              description: "Actionable concrete instructions to update the curriculum."
             },
-            suggestedIntroParagraph: {
-              type: "string",
-              description: "A tailored, high-converting professional summary or teaser (3-4 sentences) matching the role keywords directly in professional Spanish."
-            }
+            suggestedIntroParagraph: { type: "STRING", description: "A tailored professional summary." }
           },
           required: [
             "compatibilityPercentage",
@@ -132,14 +101,28 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
           ]
         }
       }
+    };
+
+    const apiResponse = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
     });
 
-    if (!response || !response.text) {
-      throw new Error("No se recibió respuesta o texto del servicio de análisis de Gemini.");
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      throw new Error(`Gemini API Error (${apiResponse.status}): ${errorText}`);
     }
 
-    const jsonText = response.text.trim();
-    const resultObj = JSON.parse(jsonText);
+    const data = await apiResponse.json();
+    
+    // Extraer de forma segura el texto JSON plano devuelto por Google
+    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!jsonText) {
+      throw new Error("No se recibió el texto esperado estructurado desde la API de Gemini.");
+    }
+
+    const resultObj = JSON.parse(jsonText.trim());
     return res.json(resultObj);
 
   } catch (error: any) {
