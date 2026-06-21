@@ -9,10 +9,10 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-// Permitir lectura de JSON con límite amplio
+// Permitir lectura de JSON con límite amplio para procesar textos extensos de CVs
 app.use(express.json({ limit: "15mb" }));
 
-// Endpoint de la API REST para el Análisis de Brechas usando Fetch Nativo (Evita caídas de librerías)
+// Endpoint de la API REST para el Análisis de Brechas
 app.post("/api/analyze", async (req, res) => {
   try {
     const { cvText, jobText } = req.body;
@@ -52,9 +52,10 @@ ${jobText}
 
 Analiza meticulosamente ambos textos según las reglas asignadas y completa el esquema JSON solicitado de forma exhaustiva.`;
 
-    // Estructura de llamada HTTP pura para Gemini 2.5 Flash con Esquema JSON Estricto
+    // Usamos el endpoint estable v1beta de gemini-2.5-flash
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
+    // CORRECCIÓN CLAVE: Definición del esquema JSON estricto con la nomenclatura exacta de Google API
     const requestBody = {
       contents: [
         {
@@ -70,11 +71,29 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
         responseSchema: {
           type: "OBJECT",
           properties: {
-            compatibilityPercentage: { type: "INTEGER", description: "General compliance level from 0 to 100." },
-            roleSummary: { type: "STRING", description: "Brief summary in Spanish describing the job opportunity, key mission, and seniority." },
-            candidateStrengths: { type: "ARRAY", items: { type: "STRING" }, description: "Key strengths of this candidate." },
-            matchingTechnologies: { type: "ARRAY", items: { type: "STRING" }, description: "List of tech keywords matching." },
-            missingTechnologies: { type: "ARRAY", items: { type: "STRING" }, description: "Critical technologies missing from the CV." },
+            compatibilityPercentage: { 
+              type: "INTEGER", 
+              description: "General compliance level from 0 to 100." 
+            },
+            roleSummary: { 
+              type: "STRING", 
+              description: "Brief summary in Spanish describing the job opportunity, key mission, and seniority." 
+            },
+            candidateStrengths: { 
+              type: "ARRAY", 
+              items: { type: "STRING" }, 
+              description: "Key strengths of this candidate." 
+            },
+            matchingTechnologies: { 
+              type: "ARRAY", 
+              items: { type: "STRING" }, 
+              description: "List of tech keywords matching." 
+            },
+            missingTechnologies: { 
+              type: "ARRAY", 
+              items: { type: "STRING" }, 
+              description: "Critical technologies missing from the CV." 
+            },
             optimizationTips: {
               type: "ARRAY",
               items: {
@@ -88,7 +107,10 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
               },
               description: "Actionable concrete instructions to update the curriculum."
             },
-            suggestedIntroParagraph: { type: "STRING", description: "A tailored professional summary." }
+            suggestedIntroParagraph: { 
+              type: "STRING", 
+              description: "A tailored professional summary." 
+            }
           },
           required: [
             "compatibilityPercentage",
@@ -116,7 +138,7 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
 
     const data = await apiResponse.json();
     
-    // Extraer de forma segura el texto JSON plano devuelto por Google
+    // Extracción segura del texto JSON plano mapeado por Google
     const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!jsonText) {
       throw new Error("No se recibió el texto esperado estructurado desde la API de Gemini.");
