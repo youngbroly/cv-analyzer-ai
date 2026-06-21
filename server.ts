@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 
 // Load environment variables
@@ -58,7 +58,7 @@ Debes leer ambos textos detalladamente y responder en un formato JSON estrictame
 2. 'roleSummary': Un breve resumen ejecutivo en español de lo que pide la oferta, su nivel de seniority y responsabilidades clave.
 3. 'candidateStrengths': Una lista estructurada de los puntos fuertes del candidato que coinciden plenamente con lo solicitado.
 4. 'matchingTechnologies': Las tecnologías, lenguajes, frameworks o herramientas que sí coinciden tanto en la oferta como en el CV (pueden ser sinónimos, pero extráelos de manera uniforme y limpia).
-5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugerivas en la oferta que no aparecen en el CV del candidato.
+5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugeridas en la oferta que no aparecen en el CV del candidato.
 6. 'optimizationTips': Un array de consejos u optimizaciones personalizadas, categorizadas por 'category' (ej. "Reescritura de Logros", "Habilidades Técnicas", "Proyectos Personales", "Certificaciones") con detalles claros ('tip') e impacto estimado ('impact'), ayudando al candidato a saber exactamente qué reescribir, qué añadir o qué destacar para este puesto en particular.
 7. 'suggestedIntroParagraph': Un resumen profesional (párrafo de introducción) en español redactado a la medida de este empleo que el candidato podría colocar al inicio de su CV para captar de inmediato el interés del reclutador, uniendo de manera atractiva sus fortalezas clave con los requisitos críticos de la oferta.
 
@@ -74,55 +74,54 @@ ${jobText}
 
 Analiza meticulosamente ambos textos según las reglas asignadas y completa el esquema JSON solicitado de forma exhaustiva.`;
 
-    // CORRECCIÓN: Cambiado de gemini-3.5-flash a gemini-2.5-flash para compatibilidad oficial con el SDK
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
-        temperature: 0.2, // low temperature for precise factual matching
+        temperature: 0.2,
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
             compatibilityPercentage: {
-              type: Type.INTEGER,
+              type: "integer",
               description: "General compliance level from 0 to 100."
             },
             roleSummary: {
-              type: Type.STRING,
+              type: "string",
               description: "Brief summary in Spanish describing the job opportunity, key mission, and seniority."
             },
             candidateStrengths: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "Key strengths of this candidate that fit current offer perfectly."
             },
             matchingTechnologies: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "List of tech keywords matching."
             },
             missingTechnologies: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
               description: "Critical technologies or competencies required in the job card that are missing from the CV."
             },
             optimizationTips: {
-              type: Type.ARRAY,
+              type: "array",
               items: {
-                type: Type.OBJECT,
+                type: "object",
                 properties: {
-                  category: { type: Type.STRING },
-                  tip: { type: Type.STRING },
-                  impact: { type: Type.STRING }
+                  category: { type: "string" },
+                  tip: { type: "string" },
+                  impact: { type: "string" }
                 },
                 required: ["category", "tip", "impact"]
               },
               description: "Actionable concrete instructions to update the curriculum to boost conversion."
             },
             suggestedIntroParagraph: {
-              type: Type.STRING,
+              type: "string",
               description: "A tailored, high-converting professional summary or teaser (3-4 sentences) matching the role keywords directly in professional Spanish."
             }
           },
@@ -148,7 +147,7 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
     return res.json(resultObj);
 
   } catch (error: any) {
-    console.error("Error durando análisis de brechas:", error);
+    console.error("Error durante análisis de brechas:", error);
     return res.status(500).json({
       error: error.message || "Se produjo un error inesperado al analizar el CV frente a la oferta de empleo.",
     });
