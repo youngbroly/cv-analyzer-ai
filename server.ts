@@ -58,7 +58,7 @@ Debes leer ambos textos detalladamente y responder en un formato JSON estrictame
 2. 'roleSummary': Un breve resumen ejecutivo en español de lo que pide la oferta, su nivel de seniority y responsabilidades clave.
 3. 'candidateStrengths': Una lista estructurada de los puntos fuertes del candidato que coinciden plenamente con lo solicitado.
 4. 'matchingTechnologies': Las tecnologías, lenguajes, frameworks o herramientas que sí coinciden tanto en la oferta como en el CV (pueden ser sinónimos, pero extráelos de manera uniforme y limpia).
-5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugeridas en la oferta que no aparecen en el CV del candidato.
+5. 'missingTechnologies': Tecnologías, metodologías o herramientas explícitamente solicitadas o altamente sugerivas en la oferta que no aparecen en el CV del candidato.
 6. 'optimizationTips': Un array de consejos u optimizaciones personalizadas, categorizadas por 'category' (ej. "Reescritura de Logros", "Habilidades Técnicas", "Proyectos Personales", "Certificaciones") con detalles claros ('tip') e impacto estimado ('impact'), ayudando al candidato a saber exactamente qué reescribir, qué añadir o qué destacar para este puesto en particular.
 7. 'suggestedIntroParagraph': Un resumen profesional (párrafo de introducción) en español redactado a la medida de este empleo que el candidato podría colocar al inicio de su CV para captar de inmediato el interés del reclutador, uniendo de manera atractiva sus fortalezas clave con los requisitos críticos de la oferta.
 
@@ -74,8 +74,9 @@ ${jobText}
 
 Analiza meticulosamente ambos textos según las reglas asignadas y completa el esquema JSON solicitado de forma exhaustiva.`;
 
+    // CORRECCIÓN: Cambiado de gemini-3.5-flash a gemini-2.5-flash para compatibilidad oficial con el SDK
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: userPrompt,
       config: {
         systemInstruction: systemPrompt,
