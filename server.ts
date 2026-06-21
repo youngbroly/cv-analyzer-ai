@@ -9,6 +9,19 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// Habilitar CORS: Permite que el frontend en Vercel se comunique con Render sin bloqueos de seguridad
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  
+  // Responder inmediatamente a las peticiones preflight de CORS (OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Permitir lectura de JSON con límite amplio para procesar textos extensos de CVs
 app.use(express.json({ limit: "15mb" }));
 
@@ -55,7 +68,7 @@ Analiza meticulosamente ambos textos según las reglas asignadas y completa el e
     // Usamos el endpoint estable v1beta de gemini-2.5-flash
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-    // CORRECCIÓN CLAVE: Definición del esquema JSON estricto con la nomenclatura exacta de Google API
+    // Definición del esquema JSON estricto con la nomenclatura exacta de Google API
     const requestBody = {
       contents: [
         {
